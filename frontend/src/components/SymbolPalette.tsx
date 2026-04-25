@@ -9,6 +9,13 @@ interface PaletteItem {
 
 const CATEGORIES: { name: string; items: PaletteItem[] }[] = [
   {
+    name: 'Power',
+    items: [
+      { type: 'rail_r', label: 'Live Rail (L1)' },
+      { type: 'rail_n', label: 'Neutral Rail (N)' },
+    ],
+  },
+  {
     name: 'Inputs',
     items: [
       { type: 'push_button_no', label: 'PB NO' },

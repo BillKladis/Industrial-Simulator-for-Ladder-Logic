@@ -37,13 +37,35 @@ class SimulationRuntime:
         self._graph.add_node(RAIL_N)
         self._elements = {}
 
+        # Build (elementId, port) → shared node from wire data.
+        # A wire's `node` field is the authoritative node ID for both endpoints.
+        port_node: dict[tuple[str, str], str] = {}
+        for wire in data.get("wires", []):
+            node = wire.get("node")
+            if not node:
+                continue
+            for endpoint in (wire.get("from", {}), wire.get("to", {})):
+                eid_ = endpoint.get("elementId")
+                port_ = endpoint.get("port")
+                if eid_ and port_:
+                    port_node[(eid_, port_)] = node
+
         for el_data in data.get("elements", []):
             eid = el_data["id"]
             etype = el_data["type"]
             ports = el_data.get("ports", {})
-            ta = ports.get("a", f"{eid}_a")
-            tb = ports.get("b", f"{eid}_b")
             params = el_data.get("params", {})
+
+            # Rails always bind to the power bus regardless of wire topology
+            if etype == "rail_r":
+                ta = tb = RAIL_R
+            elif etype == "rail_n":
+                ta = tb = RAIL_N
+            else:
+                # Wire connections override the element's own port node IDs
+                ta = port_node.get((eid, "a"), ports.get("a", f"{eid}_a"))
+                tb = port_node.get((eid, "b"), ports.get("b", f"{eid}_b"))
+
             try:
                 el = build_element(eid, etype, ta, tb, params)
                 self._elements[eid] = el

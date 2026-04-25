@@ -18,6 +18,7 @@ import { LimitSwitch } from './LimitSwitch'
 import { SolenoidValve } from './SolenoidValve'
 import { YDStarter } from './YDStarter'
 import { Terminal } from './Terminal'
+import { RailSymbol } from './RailSymbol'
 
 export type SymbolProps = {
   element: CircuitElement
@@ -51,8 +52,8 @@ export const PORT_OFFSETS: Partial<Record<ElementType, { a: { x: number; y: numb
   fuse:               { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
   terminal:           { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
   yd_starter:         { a: { x: 0, y: 30 }, b: { x: 80, y: 30 } },
-  rail_r:             { a: { x: 0, y: 20 }, b: { x: 0, y: 20 } },
-  rail_n:             { a: { x: 0, y: 20 }, b: { x: 0, y: 20 } },
+  rail_r:             { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
+  rail_n:             { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
 }
 
 type SymbolComponent = (props: { element: CircuitElement; state: ElementTickState }) => React.ReactElement | null
@@ -104,4 +105,6 @@ export const SYMBOL_MAP: Partial<Record<ElementType, SymbolComponent>> = {
   fuse: wrap(Fuse, (_, st) => ({ blown: st.blown ?? false })),
   terminal: wrap(Terminal, () => ({})),
   yd_starter: wrap(YDStarter, (_, st) => ({ mode: st.mode ?? 'off', remaining: st.remaining })),
+  rail_r: wrap(RailSymbol, () => ({ isR: true })),
+  rail_n: wrap(RailSymbol, () => ({ isR: false })),
 }

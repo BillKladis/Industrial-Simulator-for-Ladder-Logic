@@ -13,6 +13,7 @@ interface CircuitStore {
   // mutations
   placeElement: (type: ElementType, x: number, y: number) => CircuitElement
   moveElement: (id: string, x: number, y: number) => void
+  rotateElement: (id: string, delta: 90 | -90) => void
   deleteElement: (id: string) => void
   updateParams: (id: string, params: Record<string, unknown>) => void
   addWire: (wire: Wire) => void
@@ -30,18 +31,30 @@ export const useCircuitStore = create<CircuitStore>((set, get) => ({
 
   placeElement(type, x, y) {
     const id = uid('el')
-    const nodeA = uid('n')
-    const nodeB = uid('n')
+    // Rails always bind to the fixed power-bus nodes so the backend can
+    // recognise them without needing to trace wires.
+    const nodeA = type === 'rail_r' ? '__R__' : type === 'rail_n' ? '__N__' : uid('n')
+    const nodeB = type === 'rail_r' ? '__R__' : type === 'rail_n' ? '__N__' : uid('n')
     const el: CircuitElement = {
       id,
       type,
       x,
       y,
+      rotation: 0,
       params: defaultParams(type),
       ports: { a: nodeA, b: nodeB },
     }
     set((s) => ({ elements: { ...s.elements, [id]: el } }))
     return el
+  },
+
+  rotateElement(id, delta) {
+    set((s) => {
+      const el = s.elements[id]
+      if (!el) return {}
+      const next = (((el.rotation + delta) % 360) + 360) % 360 as 0 | 90 | 180 | 270
+      return { elements: { ...s.elements, [id]: { ...el, rotation: next } } }
+    })
   },
 
   moveElement(id, x, y) {

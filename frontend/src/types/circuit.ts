@@ -30,6 +30,7 @@ export interface CircuitElement {
   type: ElementType
   x: number
   y: number
+  rotation: 0 | 90 | 180 | 270
   params: Record<string, unknown>
   ports: { a: string; b: string }
 }

@@ -11,7 +11,7 @@ export function Inspector({ send }: Props) {
   const { selectedId, selectedType } = useSelectionStore()
   const elements = useCircuitStore((s) => s.elements)
   const wires = useCircuitStore((s) => s.wires)
-  const { updateParams, deleteElement, deleteWire } = useCircuitStore()
+  const { updateParams, deleteElement, deleteWire, rotateElement } = useCircuitStore()
   const elementStates = useSimStore((s) => s.elementStates)
 
   const el = selectedId && selectedType === 'element' ? elements[selectedId] : null
@@ -74,6 +74,23 @@ export function Inspector({ send }: Props) {
     <div className="w-52 shrink-0 bg-slate-800 border-l border-slate-700 p-3 flex flex-col gap-2 overflow-y-auto">
       <div className="text-xs font-bold text-slate-300">{el.type}</div>
       <div className="text-xs text-slate-500">{el.id}</div>
+
+      {/* rotation */}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs text-slate-400">Rotation: {el.rotation ?? 0}°</span>
+        <div className="flex gap-1">
+          <button
+            onClick={() => rotateElement(el.id, -90)}
+            className="flex-1 px-1 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded"
+            title="Rotate CCW (Shift+R)"
+          >↺ CCW</button>
+          <button
+            onClick={() => rotateElement(el.id, 90)}
+            className="flex-1 px-1 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded"
+            title="Rotate CW (R)"
+          >↻ CW</button>
+        </div>
+      </div>
 
       {/* params */}
       <div className="flex flex-col gap-1.5 mt-1">

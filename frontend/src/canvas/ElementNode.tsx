@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react'
+import React, { useRef, useCallback } from 'react'
 import type { CircuitElement, ElementTickState, PortRef } from '../types/circuit'
 import { GRID, SYMBOL_W, SYMBOL_H } from '../types/circuit'
 import { SYMBOL_MAP, PORT_OFFSETS } from './symbols/index'
@@ -6,6 +6,15 @@ import { useCircuitStore } from '../store/circuitStore'
 import { useSimStore } from '../store/simStore'
 import { snapToGrid } from './Snap'
 import { PORT_RADIUS } from './Snap'
+
+function rotatePoint(px: number, py: number, cx: number, cy: number, deg: number) {
+  const rad = (deg * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const dx = px - cx
+  const dy = py - cy
+  return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos }
+}
 
 interface Props {
   element: CircuitElement
@@ -20,13 +29,23 @@ interface Props {
 export function ElementNode({
   element, selected, isDrawingWire, onSelect, onPortClick, onPortHover, send
 }: Props) {
-  const { moveElement, deleteElement } = useCircuitStore()
+  const { moveElement, deleteElement, rotateElement } = useCircuitStore()
   const elementStates = useSimStore((s) => s.elementStates)
   const running = useSimStore((s) => s.running)
   const state: ElementTickState = elementStates.get(element.id) ?? {}
 
   const SymbolComp = SYMBOL_MAP[element.type]
-  const ports = PORT_OFFSETS[element.type] ?? { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } }
+  const portDefs = PORT_OFFSETS[element.type] ?? { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } }
+
+  const rotation = element.rotation ?? 0
+  const cx = element.x + SYMBOL_W / 2
+  const cy = element.y + SYMBOL_H / 2
+
+  // Compute SVG-space port positions accounting for rotation
+  const rawPortA = { x: element.x + portDefs.a.x, y: element.y + portDefs.a.y }
+  const rawPortB = { x: element.x + portDefs.b.x, y: element.y + portDefs.b.y }
+  const portA = rotatePoint(rawPortA.x, rawPortA.y, cx, cy, rotation)
+  const portB = rotatePoint(rawPortB.x, rawPortB.y, cx, cy, rotation)
 
   // Drag state
   const dragRef = useRef<{ startClientX: number; startClientY: number; origX: number; origY: number } | null>(null)
@@ -51,9 +70,7 @@ export function ElementNode({
       if (!dragRef.current) return
       const dx = (ev.clientX - dragRef.current.startClientX) / scale
       const dy = (ev.clientY - dragRef.current.startClientY) / scale
-      const newX = snapToGrid(dragRef.current.origX + dx)
-      const newY = snapToGrid(dragRef.current.origY + dy)
-      moveElement(element.id, newX, newY)
+      moveElement(element.id, snapToGrid(dragRef.current.origX + dx), snapToGrid(dragRef.current.origY + dy))
     }
 
     const onMouseUp = (ev: MouseEvent) => {
@@ -78,16 +95,10 @@ export function ElementNode({
       deleteElement(element.id)
       send({ type: 'delete_element', elementId: element.id })
     }
-  }, [element.id, deleteElement, send])
-
-  // Button click during simulation
-  const onClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (running && (element.type === 'push_button_no' || element.type === 'push_button_nc')) {
-      // handled by mousedown/up for momentary
+    if (e.key === 'r' || e.key === 'R') {
+      rotateElement(element.id, e.shiftKey ? -90 : 90)
     }
-    if (!running) onSelect()
-  }, [running, element.type, onSelect])
+  }, [element.id, deleteElement, rotateElement, send])
 
   const onSimMouseDown = useCallback((e: React.MouseEvent) => {
     if (!running) return
@@ -108,17 +119,13 @@ export function ElementNode({
     }
   }, [running, element.type, element.id, send])
 
-  const portAx = element.x + ports.a.x
-  const portAy = element.y + ports.a.y
-  const portBx = element.x + ports.b.x
-  const portBy = element.y + ports.b.y
-
   return (
     <g
       tabIndex={0}
       onMouseDown={running ? onSimMouseDown : onMouseDown}
       onKeyDown={onKeyDown}
       style={{ cursor: running ? 'pointer' : 'grab', outline: 'none' }}
+      transform={rotation ? `rotate(${rotation},${cx},${cy})` : undefined}
     >
       {/* selection outline */}
       {selected && (
@@ -139,11 +146,11 @@ export function ElementNode({
         )}
       </g>
 
-      {/* port handles */}
+      {/* port handles — positioned at unrotated coords; the group transform rotates them */}
       {[
-        { portKey: 'a' as const, x: portAx, y: portAy, node: element.ports.a },
-        { portKey: 'b' as const, x: portBx, y: portBy, node: element.ports.b },
-      ].map(({ portKey, x, y, node }) => (
+        { portKey: 'a' as const, x: rawPortA.x, y: rawPortA.y, rpt: portA, node: element.ports.a },
+        { portKey: 'b' as const, x: rawPortB.x, y: rawPortB.y, rpt: portB, node: element.ports.b },
+      ].map(({ portKey, x, y, rpt, node }) => (
         <circle
           key={portKey}
           cx={x} cy={y} r={PORT_RADIUS}
@@ -151,10 +158,10 @@ export function ElementNode({
           stroke={isDrawingWire ? '#60a5fa' : 'transparent'}
           strokeWidth={1.5}
           style={{ cursor: 'crosshair' }}
-          onMouseEnter={() => onPortHover(x, y)}
+          onMouseEnter={() => onPortHover(rpt.x, rpt.y)}
           onClick={(e) => {
             e.stopPropagation()
-            onPortClick({ elementId: element.id, port: portKey }, node, x, y)
+            onPortClick({ elementId: element.id, port: portKey }, node, rpt.x, rpt.y)
           }}
         />
       ))}
