@@ -37,24 +37,53 @@ class SimulationRuntime:
         self._graph.add_node(RAIL_N)
         self._elements = {}
 
-        # Build (elementId, port) → shared node from wire data.
-        # A wire's `node` field is the authoritative node ID for both endpoints.
-        port_node: dict[tuple[str, str], str] = {}
-        for wire in data.get("wires", []):
-            node = wire.get("node")
-            if not node:
-                continue
-            for endpoint in (wire.get("from", {}), wire.get("to", {})):
-                eid_ = endpoint.get("elementId")
-                port_ = endpoint.get("port")
-                if eid_ and port_:
-                    port_node[(eid_, port_)] = node
+        # Build (elementId, port) → shared node using union-find.
+        #
+        # Each wire's `node` field names the electrical node shared by its two
+        # endpoints.  When multiple wires touch the same element port (parallel
+        # branches) their node IDs must be merged.  Union-Find does this correctly
+        # while preserving RAIL_R/RAIL_N as roots.
 
-        # If a wire's node ID happens to be a random uid that connects to a
-        # rail, replace that uid everywhere with the canonical RAIL_R/RAIL_N.
-        # This handles the case where the user drew a wire FROM a regular
-        # element TO a rail (so the wire's node is the element's uid, not __R__).
-        rail_alias: dict[str, str] = {}
+        # Collect all wire-node values that touch each (elementId, port) pair.
+        port_wire_nodes: dict[tuple[str, str], list[str]] = {}
+        for wire in data.get("wires", []):
+            wire_node = wire.get("node")
+            if not wire_node:
+                continue
+            for ep in (wire.get("from", {}), wire.get("to", {})):
+                eid_ = ep.get("elementId", "")
+                port_ = ep.get("port", "")
+                if eid_ and port_:
+                    port_wire_nodes.setdefault((eid_, port_), []).append(wire_node)
+
+        # Union-Find on the set of wire-node IDs.
+        _parent: dict[str, str] = {RAIL_R: RAIL_R, RAIL_N: RAIL_N}
+
+        def _find(x: str) -> str:
+            if x not in _parent:
+                _parent[x] = x
+            if _parent[x] != x:
+                _parent[x] = _find(_parent[x])
+            return _parent[x]
+
+        def _union(a: str, b: str) -> None:
+            ra, rb = _find(a), _find(b)
+            if ra == rb:
+                return
+            # Rail nodes are always the canonical root.
+            if rb in (RAIL_R, RAIL_N):
+                _parent[ra] = rb
+            elif ra in (RAIL_R, RAIL_N):
+                _parent[rb] = ra
+            else:
+                _parent[rb] = ra
+
+        # Merge nodes that share an element port (parallel wires at the same pin).
+        for nodes in port_wire_nodes.values():
+            for i in range(1, len(nodes)):
+                _union(nodes[0], nodes[i])
+
+        # Rail elements force all their wires onto RAIL_R / RAIL_N.
         for el_data in data.get("elements", []):
             etype = el_data.get("type", "")
             if etype not in ("rail_r", "rail_n"):
@@ -62,13 +91,13 @@ class SimulationRuntime:
             canonical = RAIL_R if etype == "rail_r" else RAIL_N
             eid_ = el_data.get("id", "")
             for port_ in ("a", "b"):
-                wnode = port_node.get((eid_, port_))
-                if wnode and wnode not in (RAIL_R, RAIL_N):
-                    rail_alias[wnode] = canonical
-        if rail_alias:
-            port_node = {
-                k: rail_alias.get(v, v) for k, v in port_node.items()
-            }
+                for wn in port_wire_nodes.get((eid_, port_), []):
+                    _union(wn, canonical)
+
+        # Final lookup: canonical node for each (elementId, port).
+        port_node: dict[tuple[str, str], str] = {
+            k: _find(nodes[0]) for k, nodes in port_wire_nodes.items()
+        }
 
         for el_data in data.get("elements", []):
             eid = el_data["id"]

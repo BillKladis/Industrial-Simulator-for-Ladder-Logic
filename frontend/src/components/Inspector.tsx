@@ -2,9 +2,17 @@ import React, { useEffect, useState } from 'react'
 import { useSelectionStore } from '../store/selectionStore'
 import { useCircuitStore } from '../store/circuitStore'
 import { useSimStore } from '../store/simStore'
+import type { ElementType } from '../types/circuit'
 
 interface Props {
   send: (msg: Record<string, unknown>) => void
+}
+
+// Which element types are valid targets for each reference param key
+const REFERENCE_TARGETS: Record<string, ElementType[]> = {
+  coil_id:     ['relay_coil'],
+  overload_id: ['thermal_overload'],
+  timer_id:    ['on_delay_timer', 'off_delay_timer'],
 }
 
 export function Inspector({ send }: Props) {
@@ -60,11 +68,13 @@ export function Inspector({ send }: Props) {
     setParams((p) => ({ ...p, [key]: value }))
   }
 
-  const applyParams = () => {
+  const applyParams = (overrides?: Record<string, string>) => {
+    const source = overrides ?? params
     const parsed: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(params)) {
+    for (const [k, v] of Object.entries(source)) {
       const num = Number(v)
-      parsed[k] = isNaN(num) ? v : num
+      // Keep strings that are IDs (reference params) or empty
+      parsed[k] = v === '' || isNaN(num) ? v : num
     }
     updateParams(el.id, parsed)
     send({ type: 'update_params', elementId: el.id, params: parsed })
@@ -73,7 +83,7 @@ export function Inspector({ send }: Props) {
   return (
     <div className="w-52 shrink-0 bg-slate-800 border-l border-slate-700 p-3 flex flex-col gap-2 overflow-y-auto">
       <div className="text-xs font-bold text-slate-300">{el.type}</div>
-      <div className="text-xs text-slate-500">{el.id}</div>
+      <div className="text-xs text-slate-500 font-mono select-all" title="Element ID">{el.id}</div>
 
       {/* rotation */}
       <div className="flex flex-col gap-0.5">
@@ -94,18 +104,47 @@ export function Inspector({ send }: Props) {
 
       {/* params */}
       <div className="flex flex-col gap-1.5 mt-1">
-        {Object.keys(params).map((key) => (
-          <div key={key} className="flex flex-col gap-0.5">
-            <label className="text-xs text-slate-400">{key}</label>
-            <input
-              className="bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-xs text-slate-200"
-              value={params[key]}
-              onChange={(e) => handleParamChange(key, e.target.value)}
-              onBlur={applyParams}
-              onKeyDown={(e) => e.key === 'Enter' && applyParams()}
-            />
-          </div>
-        ))}
+        {Object.keys(params).map((key) => {
+          const refTypes = REFERENCE_TARGETS[key]
+          if (refTypes) {
+            const candidates = Object.values(elements).filter(
+              (e) => refTypes.includes(e.type as ElementType)
+            )
+            return (
+              <div key={key} className="flex flex-col gap-0.5">
+                <label className="text-xs text-slate-400">{key}</label>
+                <select
+                  className="bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-xs text-slate-200"
+                  value={params[key]}
+                  onChange={(e) => {
+                    const next = { ...params, [key]: e.target.value }
+                    setParams(next)
+                    applyParams(next)
+                  }}
+                >
+                  <option value="">— none —</option>
+                  {candidates.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {String(c.params.label || c.id)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )
+          }
+          return (
+            <div key={key} className="flex flex-col gap-0.5">
+              <label className="text-xs text-slate-400">{key}</label>
+              <input
+                className="bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-xs text-slate-200"
+                value={params[key]}
+                onChange={(e) => handleParamChange(key, e.target.value)}
+                onBlur={() => applyParams()}
+                onKeyDown={(e) => e.key === 'Enter' && applyParams()}
+              />
+            </div>
+          )
+        })}
       </div>
 
       {/* live state */}
