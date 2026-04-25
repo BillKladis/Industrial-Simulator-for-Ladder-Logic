@@ -50,6 +50,26 @@ class SimulationRuntime:
                 if eid_ and port_:
                     port_node[(eid_, port_)] = node
 
+        # If a wire's node ID happens to be a random uid that connects to a
+        # rail, replace that uid everywhere with the canonical RAIL_R/RAIL_N.
+        # This handles the case where the user drew a wire FROM a regular
+        # element TO a rail (so the wire's node is the element's uid, not __R__).
+        rail_alias: dict[str, str] = {}
+        for el_data in data.get("elements", []):
+            etype = el_data.get("type", "")
+            if etype not in ("rail_r", "rail_n"):
+                continue
+            canonical = RAIL_R if etype == "rail_r" else RAIL_N
+            eid_ = el_data.get("id", "")
+            for port_ in ("a", "b"):
+                wnode = port_node.get((eid_, port_))
+                if wnode and wnode not in (RAIL_R, RAIL_N):
+                    rail_alias[wnode] = canonical
+        if rail_alias:
+            port_node = {
+                k: rail_alias.get(v, v) for k, v in port_node.items()
+            }
+
         for el_data in data.get("elements", []):
             eid = el_data["id"]
             etype = el_data["type"]

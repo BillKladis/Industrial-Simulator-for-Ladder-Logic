@@ -37,8 +37,11 @@ export function useWireDraw(send: (msg: Record<string, unknown>) => void) {
         return
       }
 
-      // Collapse into a single node — use the "from" node id
-      const sharedNode = drawing.nodeId
+      // Prefer the power-rail node if either endpoint is on a rail.
+      // If we drew FROM a regular element TO a rail, drawing.nodeId is a
+      // random uid but toNodeId is '__R__'/'__N__' — use the rail's node.
+      const sharedNode =
+        (toNodeId === '__R__' || toNodeId === '__N__') ? toNodeId : drawing.nodeId
 
       const wire: Wire = {
         id: wireId(),

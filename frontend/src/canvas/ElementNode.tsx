@@ -51,8 +51,8 @@ export function ElementNode({
   const dragRef = useRef<{ startClientX: number; startClientY: number; origX: number; origY: number } | null>(null)
 
   const onMouseDown = useCallback((e: React.MouseEvent<SVGGElement>) => {
-    if (isDrawingWire) return
     e.stopPropagation()
+    if (isDrawingWire) return
     onSelect()
 
     dragRef.current = {
@@ -154,9 +154,9 @@ export function ElementNode({
         <circle
           key={portKey}
           cx={x} cy={y} r={PORT_RADIUS}
-          fill="transparent"
-          stroke={isDrawingWire ? '#60a5fa' : 'transparent'}
-          strokeWidth={1.5}
+          fill={isDrawingWire ? '#1e3a5f' : '#1e293b'}
+          stroke={isDrawingWire ? '#60a5fa' : '#475569'}
+          strokeWidth={isDrawingWire ? 2 : 1}
           style={{ cursor: 'crosshair' }}
           onMouseEnter={() => onPortHover(rpt.x, rpt.y)}
           onClick={(e) => {

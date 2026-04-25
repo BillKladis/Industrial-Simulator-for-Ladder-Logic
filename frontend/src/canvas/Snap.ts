@@ -1,6 +1,6 @@
 import { GRID } from '../types/circuit'
 
-export const PORT_RADIUS = 8
+export const PORT_RADIUS = 10
 
 export function snapToGrid(v: number): number {
   return Math.round(v / GRID) * GRID
