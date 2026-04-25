@@ -6,7 +6,7 @@ from typing import Any, Callable, Awaitable
 from app.engine.graph import CircuitGraph, RAIL_R, RAIL_N
 from app.engine.elements import build_element
 from app.engine.elements.base import Element
-from app.engine.elements.inputs import PushButton, HandSwitch, LimitSwitch
+from app.engine.elements.inputs import PushButton, HandSwitch, LimitSwitch, NposLever
 from app.engine.elements.coils import ThermalOverload
 from app.engine.solver import tick as solver_tick
 from app.config import settings
@@ -147,6 +147,12 @@ class SimulationRuntime:
                     el.is_on = pressed
             elif isinstance(el, LimitSwitch):
                 el.is_actuated = pressed
+            elif isinstance(el, NposLever):
+                el.advance()
+
+        elif etype == "advance_lever":
+            if isinstance(el, NposLever):
+                el.advance()
 
         elif etype == "trip_overload":
             if isinstance(el, ThermalOverload):

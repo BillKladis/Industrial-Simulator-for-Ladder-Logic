@@ -9,7 +9,8 @@ from app.engine.elements.coils import RelayCoil, ThermalOverload, SolenoidValveC
 from app.engine.elements.timers import OnDelayTimer, OffDelayTimer, PulseRelay
 from app.engine.elements.outputs import Lamp, Siren, Motor3Ph, MeasurementInstrument
 from app.engine.elements.compound import YDStarter
-from app.engine.elements.contacts import RelayContact, ThermalContact, OnDelayContact, OffDelayContact
+from app.engine.elements.contacts import RelayContact, ThermalContact, OnDelayContact, OffDelayContact, NposContact
+from app.engine.elements.inputs import NposLever
 
 
 @dataclass
@@ -47,6 +48,7 @@ def _load_element_ids(elements: dict[str, Element]) -> set[str]:
         Motor3Ph,
         MeasurementInstrument,
         YDStarter,
+        NposLever,
     )
     return {eid for eid, el in elements.items() if isinstance(el, load_types)}
 
@@ -70,6 +72,10 @@ def _update_contacts(elements: dict[str, Element]) -> None:
             timer = elements.get(el.timer_id)
             if timer is not None and isinstance(timer, OffDelayTimer):
                 el.set_active(timer.output_active)
+        elif isinstance(el, NposContact):
+            lever = elements.get(el.lever_id)
+            if lever is not None and isinstance(lever, NposLever):
+                el.set_lever_position(lever.position)
 
 
 def solve(

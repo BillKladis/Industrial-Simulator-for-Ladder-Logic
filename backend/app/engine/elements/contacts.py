@@ -81,3 +81,24 @@ class OffDelayContact(Element):
 
     def get_state(self) -> dict[str, Any]:
         return {"energized": self.conducts(), "active": self._active}
+
+
+class NposContact(Element):
+    """Contact that closes when a linked NposLever is at a specific position."""
+
+    def __init__(self, id: str, terminal_a: str, terminal_b: str, params: dict[str, Any]):
+        super().__init__(id, terminal_a, terminal_b, params)
+        self.lever_id: str = params.get("lever_id", "")
+        self._normally_open: bool = params.get("normally_open", True)
+        self._close_at: int = int(params.get("close_at", 0))
+        self._lever_position: int = -1
+
+    def set_lever_position(self, pos: int) -> None:
+        self._lever_position = pos
+
+    def conducts(self) -> bool:
+        active = (self._lever_position == self._close_at)
+        return active if self._normally_open else not active
+
+    def get_state(self) -> dict[str, Any]:
+        return {"energized": self.conducts(), "lever_position": self._lever_position}

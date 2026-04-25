@@ -46,3 +46,26 @@ class LimitSwitch(Element):
 
     def get_state(self) -> dict[str, Any]:
         return {"actuated": self.is_actuated, "energized": self.conducts()}
+
+
+class NposLever(Element):
+    """N-position rotary selector / dial.
+
+    Coil-like: never conducts current directly.  NposContact elements reference
+    it by ID and close when the lever is at their configured position.
+    Each button_event (toggle=True) advances the position by one step.
+    """
+
+    def __init__(self, id: str, terminal_a: str, terminal_b: str, params: dict[str, Any]):
+        super().__init__(id, terminal_a, terminal_b, params)
+        self.positions: int = max(2, int(params.get("positions", 3)))
+        self.position: int = 0
+
+    def conducts(self) -> bool:
+        return False
+
+    def advance(self) -> None:
+        self.position = (self.position + 1) % self.positions
+
+    def get_state(self) -> dict[str, Any]:
+        return {"position": self.position, "energized": False}

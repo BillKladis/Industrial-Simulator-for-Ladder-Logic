@@ -117,6 +117,10 @@ export function ElementNode({
       e.stopPropagation()
       send({ type: 'button_event', elementId: element.id, pressed: true, toggle: true })
     }
+    if (element.type === 'npos_lever') {
+      e.stopPropagation()
+      send({ type: 'button_event', elementId: element.id, pressed: true })
+    }
   }, [running, element.type, element.id, send])
 
   return (

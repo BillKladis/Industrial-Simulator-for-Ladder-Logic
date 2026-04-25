@@ -22,6 +22,7 @@ class ElementData(BaseModel):
     type: str
     x: float = 0
     y: float = 0
+    rotation: int = 0
     params: dict[str, Any] = Field(default_factory=dict)
     ports: dict[str, str] = Field(default_factory=dict)  # {"a": node_id, "b": node_id}
 

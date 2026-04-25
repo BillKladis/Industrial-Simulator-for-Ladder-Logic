@@ -71,6 +71,14 @@ const CATEGORIES: { name: string; items: PaletteItem[] }[] = [
     ],
   },
   {
+    name: 'Selectors',
+    items: [
+      { type: 'npos_lever', label: 'N-Pos Lever' },
+      { type: 'npos_contact_no', label: 'Lever Ct. NO' },
+      { type: 'npos_contact_nc', label: 'Lever Ct. NC' },
+    ],
+  },
+  {
     name: 'Sensors',
     items: [
       { type: 'proximity_no', label: 'Proximity NO' },

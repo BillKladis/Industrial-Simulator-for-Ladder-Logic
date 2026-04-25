@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Any
 from .base import Element
-from .inputs import PushButton, HandSwitch, LimitSwitch
-from .contacts import RelayContact, ThermalContact, OnDelayContact, OffDelayContact
+from .inputs import PushButton, HandSwitch, LimitSwitch, NposLever
+from .contacts import RelayContact, ThermalContact, OnDelayContact, OffDelayContact, NposContact
 from .coils import RelayCoil, ThermalOverload, SolenoidValveCoil
 from .timers import OnDelayTimer, OffDelayTimer, PulseRelay
 from .outputs import Lamp, Siren, Motor3Ph, MeasurementInstrument
@@ -59,6 +59,10 @@ REGISTRY: dict[str, type[Element]] = {
     "air_valve":        RelayCoil,
     # Passive pneumatic element
     "air_reservoir":    Terminal,
+    # N-position rotary selector (lever/dial)
+    "npos_lever":        NposLever,
+    "npos_contact_no":   lambda id, a, b, p: NposContact(id, a, b, {**p, "normally_open": True}),
+    "npos_contact_nc":   lambda id, a, b, p: NposContact(id, a, b, {**p, "normally_open": False}),
 }
 
 

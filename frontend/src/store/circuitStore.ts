@@ -154,6 +154,11 @@ function defaultParams(type: ElementType): Record<string, unknown> {
       return { label: '' }
     case 'air_reservoir':
       return { label: '' }
+    case 'npos_lever':
+      return { positions: 3, label: '' }
+    case 'npos_contact_no':
+    case 'npos_contact_nc':
+      return { lever_id: '', close_at: 0, label: '' }
     case 'pulse_relay':
       return { pulse_duration: 0.5, label: '' }
     case 'relay_contact_no':

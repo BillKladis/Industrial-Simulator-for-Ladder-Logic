@@ -14,6 +14,7 @@ const REFERENCE_TARGETS: Record<string, ElementType[]> = {
   retract_coil_id:['relay_coil', 'air_valve', 'linear_piston'],
   overload_id:    ['thermal_overload'],
   timer_id:       ['on_delay_timer', 'off_delay_timer'],
+  lever_id:       ['npos_lever'],
 }
 
 export function Inspector({ send }: Props) {

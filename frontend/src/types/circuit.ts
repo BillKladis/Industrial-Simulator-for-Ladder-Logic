@@ -32,6 +32,9 @@ export type ElementType =
   | 'air_cylinder_sa' | 'air_cylinder_da'
   | 'air_valve'
   | 'air_reservoir'
+  // N-position rotary selector
+  | 'npos_lever'
+  | 'npos_contact_no' | 'npos_contact_nc'
 
 export interface CircuitElement {
   id: string
@@ -87,6 +90,9 @@ export interface ElementTickState {
   // sensor / actuator (playground elements)
   active?: boolean
   extended?: boolean
+  // npos lever / contact
+  position?: number
+  lever_position?: number
 }
 
 // Port positions (canvas coords relative to element top-left)
