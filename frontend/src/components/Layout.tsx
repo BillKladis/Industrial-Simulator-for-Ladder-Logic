@@ -4,6 +4,7 @@ import { Inspector } from './Inspector'
 import { StatusBar } from './StatusBar'
 import { Toolbar } from './Toolbar'
 import { Canvas } from '../canvas/Canvas'
+import { Playground } from './Playground'
 
 interface Props {
   send: (msg: Record<string, unknown>) => void
@@ -13,11 +14,12 @@ export function Layout({ send }: Props) {
   return (
     <div className="flex flex-col h-screen bg-slate-900 text-slate-200">
       <Toolbar send={send} />
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <SymbolPalette />
         <div className="flex-1 min-w-0">
           <Canvas send={send} />
         </div>
+        <Playground send={send} />
         <Inspector send={send} />
       </div>
       <StatusBar />

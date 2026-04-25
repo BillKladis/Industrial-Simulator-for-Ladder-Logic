@@ -47,6 +47,18 @@ REGISTRY: dict[str, type[Element]] = {
     "rail_n": Rail,
     # compound
     "yd_starter": YDStarter,
+    # Sensors — maintained switches; state driven by playground via button_event
+    "proximity_no":   lambda id, a, b, p: HandSwitch(id, a, b, {**p, "normally_open": True}),
+    "proximity_nc":   lambda id, a, b, p: HandSwitch(id, a, b, {**p, "normally_open": False}),
+    "temp_sensor_no": lambda id, a, b, p: HandSwitch(id, a, b, {**p, "normally_open": True}),
+    "temp_sensor_nc": lambda id, a, b, p: HandSwitch(id, a, b, {**p, "normally_open": False}),
+    # Actuators — relay-coil behaviour (energised when powered, don't conduct)
+    "linear_piston":    RelayCoil,
+    "air_cylinder_sa":  RelayCoil,
+    "air_cylinder_da":  RelayCoil,
+    "air_valve":        RelayCoil,
+    # Passive pneumatic element
+    "air_reservoir":    Terminal,
 }
 
 

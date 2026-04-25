@@ -24,6 +24,14 @@ export type ElementType =
   | 'rail_r' | 'rail_n'
   // compound
   | 'yd_starter'
+  // Playground sensors (contact behaviour)
+  | 'proximity_no' | 'proximity_nc'
+  | 'temp_sensor_no' | 'temp_sensor_nc'
+  // Playground actuators (coil behaviour)
+  | 'linear_piston'
+  | 'air_cylinder_sa' | 'air_cylinder_da'
+  | 'air_valve'
+  | 'air_reservoir'
 
 export interface CircuitElement {
   id: string
@@ -76,6 +84,9 @@ export interface ElementTickState {
   tripped?: boolean
   blown?: boolean
   coil_energized?: boolean
+  // sensor / actuator (playground elements)
+  active?: boolean
+  extended?: boolean
 }
 
 // Port positions (canvas coords relative to element top-left)

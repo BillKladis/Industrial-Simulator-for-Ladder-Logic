@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useSelectionStore } from '../store/selectionStore'
 import { useCircuitStore } from '../store/circuitStore'
 import { useSimStore } from '../store/simStore'
-import type { ElementType } from '../types/circuit'
+import type { CircuitElement, ElementType } from '../types/circuit'
 
 interface Props {
   send: (msg: Record<string, unknown>) => void
@@ -10,13 +10,14 @@ interface Props {
 
 // Which element types are valid targets for each reference param key
 const REFERENCE_TARGETS: Record<string, ElementType[]> = {
-  coil_id:     ['relay_coil'],
-  overload_id: ['thermal_overload'],
-  timer_id:    ['on_delay_timer', 'off_delay_timer'],
+  coil_id:        ['relay_coil', 'air_valve', 'linear_piston'],
+  retract_coil_id:['relay_coil', 'air_valve', 'linear_piston'],
+  overload_id:    ['thermal_overload'],
+  timer_id:       ['on_delay_timer', 'off_delay_timer'],
 }
 
 export function Inspector({ send }: Props) {
-  const { selectedId, selectedType } = useSelectionStore()
+  const { selectedId, selectedType, deselect } = useSelectionStore()
   const elements = useCircuitStore((s) => s.elements)
   const wires = useCircuitStore((s) => s.wires)
   const { updateParams, deleteElement, deleteWire, rotateElement } = useCircuitStore()
@@ -51,7 +52,7 @@ export function Inspector({ send }: Props) {
         <div className="text-xs font-bold text-slate-400">Wire</div>
         <div className="text-xs text-slate-500">Node: {wire.node}</div>
         <button
-          onClick={() => { deleteWire(wire.id); send({ type: 'delete_wire', wireId: wire.id }) }}
+          onClick={() => { deleteWire(wire.id); send({ type: 'delete_wire', wireId: wire.id }); deselect() }}
           className="mt-2 px-2 py-1 bg-red-700 hover:bg-red-600 text-white text-xs rounded"
         >
           Delete wire
@@ -107,8 +108,8 @@ export function Inspector({ send }: Props) {
         {Object.keys(params).map((key) => {
           const refTypes = REFERENCE_TARGETS[key]
           if (refTypes) {
-            const candidates = Object.values(elements).filter(
-              (e) => refTypes.includes(e.type as ElementType)
+            const candidates = (Object.values(elements) as CircuitElement[]).filter(
+              (e) => refTypes.includes(e.type)
             )
             return (
               <div key={key} className="flex flex-col gap-0.5">
@@ -163,7 +164,7 @@ export function Inspector({ send }: Props) {
       )}
 
       <button
-        onClick={() => { deleteElement(el.id); send({ type: 'delete_element', elementId: el.id }) }}
+        onClick={() => { deleteElement(el.id); send({ type: 'delete_element', elementId: el.id }); deselect() }}
         className="mt-auto px-2 py-1 bg-red-700 hover:bg-red-600 text-white text-xs rounded"
       >
         Delete element

@@ -7,7 +7,8 @@ import { useDragDrop } from '../hooks/useDragDrop'
 import { ElementNode } from './ElementNode'
 import { Wire } from './Wire'
 import { routeManhattan } from './Routing'
-import type { PortRef } from '../types/circuit'
+import { getPortPos } from './portUtils'
+import type { CircuitElement, PortRef, Wire as WireType } from '../types/circuit'
 
 const GRID_SIZE = 20
 
@@ -27,12 +28,35 @@ export function Canvas({ send }: Props) {
   const [isPanning, setIsPanning] = useState(false)
   const panStart = useRef<{ clientX: number; clientY: number; vbX: number; vbY: number } | null>(null)
 
-  const { elements, wires, deleteWire } = useCircuitStore()
+  const { elements, wires, deleteElement, deleteWire } = useCircuitStore()
   const liveNodes = useSimStore((s) => s.liveNodes)
   const { selectedId, selectedType, select, deselect } = useSelectionStore()
 
   const { drawing, cursorPos, startWire, updateCursor, finishWire, cancelWire } = useWireDraw(send)
   const { onDrop, onDragOver } = useDragDrop(send)
+
+  // Global Delete/Backspace handler — works regardless of SVG focus
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      // Don't fire when typing in input/select/textarea
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+      if (!selectedId) return
+      e.preventDefault()
+      if (selectedType === 'element') {
+        deleteElement(selectedId)
+        send({ type: 'delete_element', elementId: selectedId })
+        deselect()
+      } else if (selectedType === 'wire') {
+        deleteWire(selectedId)
+        send({ type: 'delete_wire', wireId: selectedId })
+        deselect()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedId, selectedType, deleteElement, deleteWire, deselect, send])
 
   // Pan
   const onMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
@@ -125,13 +149,22 @@ export function Canvas({ send }: Props) {
       {/* grid */}
       <g>{gridLines()}</g>
 
-      {/* wires */}
-      {Object.values(wires).map((w) => {
+      {/* wires — polyline recomputed from current element positions so they follow moves */}
+      {(Object.values(wires) as WireType[]).map((w) => {
         const live = liveNodes.has(w.node)
+        const fromEl = elements[w.from.elementId]
+        const toEl = elements[w.to.elementId]
+        let polyline = w.polyline
+        if (fromEl && toEl) {
+          const from = getPortPos(fromEl, w.from.port)
+          const to = getPortPos(toEl, w.to.port)
+          const mid = (from.x + to.x) / 2
+          polyline = [[from.x, from.y], [mid, from.y], [mid, to.y], [to.x, to.y]]
+        }
         return (
           <Wire
             key={w.id}
-            wire={w}
+            wire={{ ...w, polyline }}
             live={live}
             selected={selectedId === w.id && selectedType === 'wire'}
             onClick={() => select(w.id, 'wire')}
@@ -144,7 +177,7 @@ export function Canvas({ send }: Props) {
       })}
 
       {/* elements */}
-      {Object.values(elements).map((el) => (
+      {(Object.values(elements) as CircuitElement[]).map((el) => (
         <ElementNode
           key={el.id}
           element={el}

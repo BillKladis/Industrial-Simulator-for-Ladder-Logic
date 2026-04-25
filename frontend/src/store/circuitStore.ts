@@ -127,13 +127,33 @@ export const useCircuitStore = create<CircuitStore>((set, get) => ({
 function defaultParams(type: ElementType): Record<string, unknown> {
   switch (type) {
     case 'on_delay_timer':
+      return { delay: 5, label: '' }
     case 'on_delay_contact_no':
     case 'on_delay_contact_nc':
-      return { delay: 5, label: '' }
+      return { timer_id: '', label: '' }
     case 'off_delay_timer':
+      return { delay: 5, label: '' }
     case 'off_delay_contact_no':
     case 'off_delay_contact_nc':
-      return { delay: 5, label: '' }
+      return { timer_id: '', label: '' }
+    // playground sensors
+    case 'proximity_no':
+    case 'proximity_nc':
+      return { label: '' }
+    case 'temp_sensor_no':
+    case 'temp_sensor_nc':
+      return { threshold: 50, label: '' }
+    // playground actuators
+    case 'linear_piston':
+      return { extension: 80, direction: 'right', sticky: false, label: '' }
+    case 'air_cylinder_sa':
+      return { coil_id: '', extension: 80, direction: 'right', label: '' }
+    case 'air_cylinder_da':
+      return { coil_id: '', retract_coil_id: '', extension: 80, direction: 'right', label: '' }
+    case 'air_valve':
+      return { label: '' }
+    case 'air_reservoir':
+      return { label: '' }
     case 'pulse_relay':
       return { pulse_duration: 0.5, label: '' }
     case 'relay_contact_no':

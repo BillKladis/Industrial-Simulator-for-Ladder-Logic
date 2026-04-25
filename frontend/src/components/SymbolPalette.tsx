@@ -70,6 +70,30 @@ const CATEGORIES: { name: string; items: PaletteItem[] }[] = [
       { type: 'yd_starter', label: 'Y-Δ Starter' },
     ],
   },
+  {
+    name: 'Sensors',
+    items: [
+      { type: 'proximity_no', label: 'Proximity NO' },
+      { type: 'proximity_nc', label: 'Proximity NC' },
+      { type: 'temp_sensor_no', label: 'Temp NO' },
+      { type: 'temp_sensor_nc', label: 'Temp NC' },
+    ],
+  },
+  {
+    name: 'Actuators',
+    items: [
+      { type: 'linear_piston', label: 'Lin. Piston' },
+    ],
+  },
+  {
+    name: 'Pneumatic',
+    items: [
+      { type: 'air_cylinder_sa', label: 'Air Cyl. SA' },
+      { type: 'air_cylinder_da', label: 'Air Cyl. DA' },
+      { type: 'air_valve', label: 'Air Valve' },
+      { type: 'air_reservoir', label: 'Air Reservoir' },
+    ],
+  },
 ]
 
 export function SymbolPalette() {
