@@ -55,9 +55,24 @@ def _load_element_ids(elements: dict[str, Element]) -> set[str]:
 
 def _update_contacts(elements: dict[str, Element]) -> None:
     """Push coil/timer states down into their dependent contacts."""
+    # Build label → coil/lever maps for auto-linking by label (K1 coil drives K1 contacts)
+    label_to_coil: dict[str, Element] = {}
+    label_to_lever: dict[str, Element] = {}
+    for el in elements.values():
+        lbl = str(el.params.get("label", "")).strip()
+        if not lbl:
+            continue
+        if isinstance(el, (RelayCoil, SolenoidValveCoil)):
+            label_to_coil[lbl] = el
+        elif isinstance(el, NposLever):
+            label_to_lever[lbl] = el
+
     for el in elements.values():
         if isinstance(el, RelayContact):
             coil = elements.get(el.coil_id)
+            if coil is None:
+                lbl = str(el.params.get("label", "")).strip()
+                coil = label_to_coil.get(lbl)
             if coil is not None and hasattr(coil, "energized"):
                 el.set_coil_state(coil.energized)
         elif isinstance(el, ThermalContact):
@@ -74,6 +89,9 @@ def _update_contacts(elements: dict[str, Element]) -> None:
                 el.set_active(timer.output_active)
         elif isinstance(el, NposContact):
             lever = elements.get(el.lever_id)
+            if lever is None:
+                lbl = str(el.params.get("label", "")).strip()
+                lever = label_to_lever.get(lbl)
             if lever is not None and isinstance(lever, NposLever):
                 el.set_lever_position(lever.position)
 
@@ -96,13 +114,20 @@ def solve(
     live: set[str] = set()
     neutral: set[str] = set()
 
+    # Coil-type elements conduct like resistors (current passes through them)
+    _COIL_TYPES = (RelayCoil, ThermalOverload, SolenoidValveCoil, OnDelayTimer, OffDelayTimer, PulseRelay)
+
     for _ in range(max_iterations):
-        # Conducting elements: those whose conducts() is True and aren't loads
+        # Conducting elements: those whose conducts() is True and aren't pure output loads
         conducting = {
             eid
             for eid, el in elements.items()
             if eid not in load_ids and el.conducts()
         }
+        # Coils always conduct regardless of load_ids classification
+        for eid, el in elements.items():
+            if isinstance(el, _COIL_TYPES):
+                conducting.add(eid)
 
         new_live = _bfs(RAIL_R, graph, conducting)
         new_neutral = _bfs(RAIL_N, graph, conducting)
