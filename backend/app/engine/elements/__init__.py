@@ -52,13 +52,6 @@ REGISTRY: dict[str, type[Element]] = {
     "proximity_nc":   lambda id, a, b, p: HandSwitch(id, a, b, {**p, "normally_open": False}),
     "temp_sensor_no": lambda id, a, b, p: HandSwitch(id, a, b, {**p, "normally_open": True}),
     "temp_sensor_nc": lambda id, a, b, p: HandSwitch(id, a, b, {**p, "normally_open": False}),
-    # Actuators — relay-coil behaviour (energised when powered, don't conduct)
-    "linear_piston":    RelayCoil,
-    "air_cylinder_sa":  RelayCoil,
-    "air_cylinder_da":  RelayCoil,
-    "air_valve":        RelayCoil,
-    # Passive pneumatic element
-    "air_reservoir":    Terminal,
     # N-position rotary selector (lever/dial)
     "npos_lever":        NposLever,
     "npos_contact_no":   lambda id, a, b, p: NposContact(id, a, b, {**p, "normally_open": True}),

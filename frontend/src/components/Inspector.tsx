@@ -10,8 +10,8 @@ interface Props {
 
 // Which element types are valid targets for each reference param key
 const REFERENCE_TARGETS: Record<string, ElementType[]> = {
-  coil_id:        ['relay_coil', 'air_valve', 'linear_piston'],
-  retract_coil_id:['relay_coil', 'air_valve', 'linear_piston'],
+  coil_id:        ['relay_coil'],
+  retract_coil_id:['relay_coil'],
   overload_id:    ['thermal_overload'],
   timer_id:       ['on_delay_timer', 'off_delay_timer'],
   lever_id:       ['npos_lever'],

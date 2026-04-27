@@ -20,10 +20,6 @@ import { Terminal } from './Terminal'
 import { RailSymbol } from './RailSymbol'
 import { ProximitySensor } from './ProximitySensor'
 import { TempSensor } from './TempSensor'
-import { LinearPiston } from './LinearPiston'
-import { AirCylinderSA, AirCylinderDA } from './AirCylinder'
-import { AirValveSym } from './AirValveSym'
-import { AirReservoir } from './AirReservoir'
 import { NposLever } from './NposLever'
 import { NposContact } from './NposContact'
 
@@ -65,11 +61,6 @@ export const PORT_OFFSETS: Partial<Record<ElementType, { a: { x: number; y: numb
   proximity_nc:        { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
   temp_sensor_no:      { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
   temp_sensor_nc:      { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
-  linear_piston:       { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
-  air_cylinder_sa:     { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
-  air_cylinder_da:     { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
-  air_valve:           { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
-  air_reservoir:       { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
   npos_lever:          { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
   npos_contact_no:     { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
   npos_contact_nc:     { a: { x: 0, y: 20 }, b: { x: 60, y: 20 } },
@@ -122,12 +113,6 @@ export const SYMBOL_MAP: Partial<Record<ElementType, SymbolComponent>> = {
   proximity_nc: wrap(ProximitySensor, (_, st) => ({ normallyOpen: false, energized: st.energized ?? false })),
   temp_sensor_no: wrap(TempSensor, (_, st) => ({ normallyOpen: true, energized: st.energized ?? false })),
   temp_sensor_nc: wrap(TempSensor, (_, st) => ({ normallyOpen: false, energized: st.energized ?? false })),
-  // new actuators (coil-like)
-  linear_piston: wrap(LinearPiston, () => ({})),
-  air_cylinder_sa: wrap(AirCylinderSA, () => ({})),
-  air_cylinder_da: wrap(AirCylinderDA, () => ({})),
-  air_valve: wrap(AirValveSym, () => ({})),
-  air_reservoir: wrap(AirReservoir, () => ({})),
   // npos lever (coil-like, shows dial with current position)
   npos_lever: wrap(NposLever, (el, st) => ({
     positions: Number(el.params.positions ?? 3),

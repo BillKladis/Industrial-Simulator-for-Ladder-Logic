@@ -143,17 +143,6 @@ function defaultParams(type: ElementType): Record<string, unknown> {
     case 'temp_sensor_no':
     case 'temp_sensor_nc':
       return { threshold: 50, label: '' }
-    // playground actuators
-    case 'linear_piston':
-      return { extension: 80, direction: 'right', sticky: false, label: '' }
-    case 'air_cylinder_sa':
-      return { coil_id: '', extension: 80, direction: 'right', label: '' }
-    case 'air_cylinder_da':
-      return { coil_id: '', retract_coil_id: '', extension: 80, direction: 'right', label: '' }
-    case 'air_valve':
-      return { label: '' }
-    case 'air_reservoir':
-      return { label: '' }
     case 'npos_lever':
       return { positions: 3, label: '' }
     case 'npos_contact_no':

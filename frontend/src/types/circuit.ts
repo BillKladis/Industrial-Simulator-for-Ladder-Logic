@@ -27,11 +27,6 @@ export type ElementType =
   // Playground sensors (contact behaviour)
   | 'proximity_no' | 'proximity_nc'
   | 'temp_sensor_no' | 'temp_sensor_nc'
-  // Playground actuators (coil behaviour)
-  | 'linear_piston'
-  | 'air_cylinder_sa' | 'air_cylinder_da'
-  | 'air_valve'
-  | 'air_reservoir'
   // N-position rotary selector
   | 'npos_lever'
   | 'npos_contact_no' | 'npos_contact_nc'

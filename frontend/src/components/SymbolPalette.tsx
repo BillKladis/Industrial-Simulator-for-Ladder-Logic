@@ -87,21 +87,6 @@ const CATEGORIES: { name: string; items: PaletteItem[] }[] = [
       { type: 'temp_sensor_nc', label: 'Temp NC' },
     ],
   },
-  {
-    name: 'Actuators',
-    items: [
-      { type: 'linear_piston', label: 'Lin. Piston' },
-    ],
-  },
-  {
-    name: 'Pneumatic',
-    items: [
-      { type: 'air_cylinder_sa', label: 'Air Cyl. SA' },
-      { type: 'air_cylinder_da', label: 'Air Cyl. DA' },
-      { type: 'air_valve', label: 'Air Valve' },
-      { type: 'air_reservoir', label: 'Air Reservoir' },
-    ],
-  },
 ]
 
 export function SymbolPalette() {
