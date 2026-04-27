@@ -195,7 +195,7 @@ export function Playground({ send }: Props) {
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
-        onClick={() => setSelectedDevId(null)}
+        onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedDevId(null) }}
       >
         {/* Grid */}
         <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
@@ -407,248 +407,278 @@ interface PgWidgetProps {
   onRemove: () => void
 }
 
+function PhaseContact({ cx, cy, closed, phaseColor, activeColor }: {
+  cx: number; cy: number; closed: boolean; phaseColor: string; activeColor: string
+}) {
+  const c = closed ? activeColor : phaseColor
+  return (
+    <g>
+      <line x1={cx} y1={cy - 9} x2={cx} y2={cy - 4} stroke={c} strokeWidth={1.5} />
+      {closed
+        ? <line x1={cx - 6} y1={cy} x2={cx + 6} y2={cy} stroke={activeColor} strokeWidth={2} />
+        : <line x1={cx - 5} y1={cy - 2} x2={cx + 5} y2={cy - 7} stroke={c} strokeWidth={1.5} />
+      }
+      <line x1={cx} y1={cy + 4} x2={cx} y2={cy + 9} stroke={c} strokeWidth={1.5} />
+    </g>
+  )
+}
+
 function Motor3PhWidget({ dev, pos, energized, retracting, selected, onMouseDown, onRemove }: PgWidgetProps) {
   const label = dev.label || DEVICE_LABELS[dev.deviceType]
-  const muted = '#94a3b8'
-  const R = '#ef4444', S = '#eab308', T = '#3b82f6'
-  // forward = RST→UVW straight; reverse = S↔T swapped (retracting coil)
-  const fwd = energized && !retracting
-  const rev = retracting
+  const RC = '#ef4444', SC = '#eab308', TC = '#3b82f6'
+  const MUTED = '#475569', GREEN = '#22c55e', AMBER = '#f59e0b', RED_C = '#ef4444'
+  const fwd = energized
+  const rev = retracting && !energized
+  const fault = energized && retracting
   const running = fwd || rev
+  const hasRev = !!dev.retract_coil_id
 
-  const base: React.CSSProperties = {
-    position: 'absolute', left: pos.x, top: pos.y,
-    userSelect: 'none', cursor: 'grab',
-    outline: selected ? '2px solid #60a5fa' : 'none', borderRadius: 4,
-  }
+  const W = 130
+  const xR = 22, xS = 65, xT = 108
+  const yBus = 15
+  const yC1Top = 24, yC1Mid = 37, yC1Bot = 50
+  const yC2Top = 53, yC2Mid = 66, yC2Bot = 79
+  const yMotorTop = hasRev ? 82 : 52
+  const yMotorCy = hasRev ? 114 : 97
+  const H = hasRev ? 150 : 124
+  const rMotor = 24
+
+  const c1Color = fwd ? GREEN : MUTED
+  const c2Color = rev ? AMBER : MUTED
+  const motorColor = fault ? RED_C : running ? (rev ? AMBER : GREEN) : MUTED
 
   return (
-    <div style={base} onMouseDown={onMouseDown}>
-      <svg width={120} height={90}>
-        {/* Phase lines in */}
-        <line x1={10} y1={10} x2={10} y2={42} stroke={R} strokeWidth={2.5} />
-        <line x1={26} y1={10} x2={26} y2={42} stroke={S} strokeWidth={2.5} />
-        <line x1={42} y1={10} x2={42} y2={42} stroke={T} strokeWidth={2.5} />
-        {/* Phase labels */}
-        <text x={10} y={8} textAnchor="middle" fontSize={7} fill={R} fontWeight="bold">R</text>
-        <text x={26} y={8} textAnchor="middle" fontSize={7} fill={S} fontWeight="bold">S</text>
-        <text x={42} y={8} textAnchor="middle" fontSize={7} fill={T} fontWeight="bold">T</text>
-        {/* Swap indicator when reversed */}
-        {rev && (
-          <>
-            <line x1={26} y1={22} x2={42} y2={34} stroke="#f59e0b" strokeWidth={1.5} />
-            <line x1={42} y1={22} x2={26} y2={34} stroke="#f59e0b" strokeWidth={1.5} />
-          </>
-        )}
-        {/* Motor circle */}
-        <circle cx={52} cy={56} r={28} stroke={running ? (rev ? '#f59e0b' : '#22c55e') : muted} strokeWidth={2} fill="#1e293b" />
-        <text x={52} y={54} textAnchor="middle" fontSize={9} fill={running ? '#fff' : muted} fontWeight="bold">M</text>
-        <text x={52} y={65} textAnchor="middle" fontSize={8} fill={running ? '#fff' : '#475569'}>3~</text>
-        {/* Rotation arc */}
-        {running && (
-          <path
-            d={fwd
-              ? 'M38,56 A14,14 0 0,1 66,56'
-              : 'M66,56 A14,14 0 0,1 38,56'}
-            fill="none"
-            stroke={rev ? '#f59e0b' : '#22c55e'}
-            strokeWidth={2}
-            markerEnd="url(#arrowM)"
-          />
-        )}
+    <div
+      style={{
+        position: 'absolute', left: pos.x, top: pos.y,
+        userSelect: 'none', cursor: 'grab',
+        outline: selected ? '2px solid #60a5fa' : 'none', borderRadius: 4,
+      }}
+      onMouseDown={onMouseDown}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <svg width={W} height={H}>
         <defs>
-          <marker id="arrowM" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill={rev ? '#f59e0b' : '#22c55e'} />
+          <marker id="mArrow" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto">
+            <path d="M0,0 L5,2.5 L0,5 Z" fill={rev ? AMBER : GREEN} />
           </marker>
         </defs>
-        {/* Direction label */}
-        {running && (
-          <text x={52} y={88} textAnchor="middle" fontSize={7} fill={rev ? '#f59e0b' : '#22c55e'}>
-            {rev ? 'REV' : 'FWD'}
-          </text>
+        {/* RST bus bar */}
+        <line x1={xR - 6} y1={yBus} x2={xT + 6} y2={yBus} stroke={MUTED} strokeWidth={1.5} />
+        <text x={xR} y={11} textAnchor="middle" fontSize={8} fill={RC} fontWeight="bold">R</text>
+        <text x={xS} y={11} textAnchor="middle" fontSize={8} fill={SC} fontWeight="bold">S</text>
+        <text x={xT} y={11} textAnchor="middle" fontSize={8} fill={TC} fontWeight="bold">T</text>
+        {/* Drops from bus to C1 */}
+        <line x1={xR} y1={yBus} x2={xR} y2={yC1Top} stroke={RC} strokeWidth={2} />
+        <line x1={xS} y1={yBus} x2={xS} y2={yC1Top} stroke={SC} strokeWidth={2} />
+        <line x1={xT} y1={yBus} x2={xT} y2={yC1Top} stroke={TC} strokeWidth={2} />
+        {/* C1 contact box (forward) */}
+        <rect x={8} y={yC1Top} width={W - 16} height={yC1Bot - yC1Top}
+          stroke={c1Color} strokeWidth={1} fill="#1e293b" rx={2} />
+        <text x={W / 2} y={yC1Top - 1} textAnchor="middle" fontSize={6} fill={c1Color}>C1 FWD</text>
+        <PhaseContact cx={xR} cy={yC1Mid} closed={fwd} phaseColor={RC} activeColor={GREEN} />
+        <PhaseContact cx={xS} cy={yC1Mid} closed={fwd} phaseColor={SC} activeColor={GREEN} />
+        <PhaseContact cx={xT} cy={yC1Mid} closed={fwd} phaseColor={TC} activeColor={GREEN} />
+        {/* Wires from C1 */}
+        <line x1={xR} y1={yC1Bot} x2={xR} y2={hasRev ? yC2Top : yMotorTop} stroke={fwd ? RC : MUTED} strokeWidth={fwd ? 2 : 1} />
+        <line x1={xS} y1={yC1Bot} x2={xS} y2={hasRev ? yC2Top : yMotorTop} stroke={fwd ? SC : MUTED} strokeWidth={fwd ? 2 : 1} />
+        <line x1={xT} y1={yC1Bot} x2={xT} y2={hasRev ? yC2Top : yMotorTop} stroke={fwd ? TC : MUTED} strokeWidth={fwd ? 2 : 1} />
+        {hasRev && <>
+          {/* C2 contact box (reverse) */}
+          <rect x={8} y={yC2Top} width={W - 16} height={yC2Bot - yC2Top}
+            stroke={c2Color} strokeWidth={1} fill="#1e293b" rx={2} />
+          <text x={W / 2} y={yC2Top - 1} textAnchor="middle" fontSize={6} fill={c2Color}>C2 REV</text>
+          <PhaseContact cx={xR} cy={yC2Mid} closed={rev} phaseColor={RC} activeColor={AMBER} />
+          <PhaseContact cx={xS} cy={yC2Mid} closed={rev} phaseColor={SC} activeColor={AMBER} />
+          <PhaseContact cx={xT} cy={yC2Mid} closed={rev} phaseColor={TC} activeColor={AMBER} />
+          {rev ? <>
+            {/* Phase crossover: R→W, S→V, T→U (R and T swap) */}
+            <line x1={xR} y1={yC2Bot} x2={xT} y2={yMotorTop} stroke={RC} strokeWidth={2} />
+            <line x1={xS} y1={yC2Bot} x2={xS} y2={yMotorTop} stroke={SC} strokeWidth={2} />
+            <line x1={xT} y1={yC2Bot} x2={xR} y2={yMotorTop} stroke={TC} strokeWidth={2} />
+          </> : <>
+            <line x1={xR} y1={yC2Bot} x2={xR} y2={yMotorTop} stroke={MUTED} strokeWidth={1} />
+            <line x1={xS} y1={yC2Bot} x2={xS} y2={yMotorTop} stroke={MUTED} strokeWidth={1} />
+            <line x1={xT} y1={yC2Bot} x2={xT} y2={yMotorTop} stroke={MUTED} strokeWidth={1} />
+          </>}
+        </>}
+        {/* Motor terminal bar + UVW labels */}
+        <line x1={xR - 6} y1={yMotorTop} x2={xT + 6} y2={yMotorTop} stroke={MUTED} strokeWidth={1.5} />
+        <text x={xR} y={yMotorTop + 9} textAnchor="middle" fontSize={6} fill={MUTED}>U</text>
+        <text x={xS} y={yMotorTop + 9} textAnchor="middle" fontSize={6} fill={MUTED}>V</text>
+        <text x={xT} y={yMotorTop + 9} textAnchor="middle" fontSize={6} fill={MUTED}>W</text>
+        {/* Motor body */}
+        <circle cx={W / 2} cy={yMotorCy} r={rMotor} stroke={motorColor} strokeWidth={2} fill="#1e293b" />
+        <text x={W / 2} y={yMotorCy - 3} textAnchor="middle" fontSize={11} fill={running ? '#fff' : MUTED} fontWeight="bold">M</text>
+        <text x={W / 2} y={yMotorCy + 10} textAnchor="middle" fontSize={8} fill={running ? '#fff' : MUTED}>3~</text>
+        {/* Rotation arc */}
+        {running && !fault && (
+          <path
+            d={fwd
+              ? `M${W / 2 - rMotor + 5},${yMotorCy} A${rMotor - 5},${rMotor - 5} 0 0,1 ${W / 2 + rMotor - 5},${yMotorCy}`
+              : `M${W / 2 + rMotor - 5},${yMotorCy} A${rMotor - 5},${rMotor - 5} 0 0,1 ${W / 2 - rMotor + 5},${yMotorCy}`}
+            fill="none" stroke={rev ? AMBER : GREEN} strokeWidth={2.5} markerEnd="url(#mArrow)"
+          />
+        )}
+        {fault && (
+          <text x={W / 2} y={yMotorCy + 34} textAnchor="middle" fontSize={9} fill={RED_C} fontWeight="bold">FAULT!</text>
         )}
       </svg>
-      <div style={{ fontSize: 9, color: '#64748b', textAlign: 'center', marginTop: -2 }}>{label}</div>
+      <div style={{ fontSize: 9, color: '#64748b', textAlign: 'center' }}>{label}</div>
       {selected && <RemoveBtn onRemove={onRemove} />}
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Valve widget — ISO 1219 box-with-symbols notation
+// Valve widget — ISO 1219 directional control valve notation
 // ---------------------------------------------------------------------------
 
-// Each valve type defines: number of positions (boxes), and per-position flow paths
-// Flow path = array of [portFrom, portTo] or 'block:portName'
-type ValveConfig = {
-  positions: number
-  ports: string[]       // port labels for stubs
-  flows: Array<Array<[string, string] | ['block', string]>>
+const V_BW = 38, V_BH = 50, V_GAP = 3, V_STUB = 20
+const V_AL = 30, V_AR = 30   // actuator area width on each side
+
+const VALVE_PORT_POS: Record<string, Record<string, { x: number; y: number }>> = {
+  valve_22: { P: { x: 19, y: V_BH - 2 }, A: { x: 19, y: 2 } },
+  valve_32: { A: { x: 19, y: 2 }, P: { x: 10, y: V_BH - 2 }, T: { x: 28, y: V_BH - 2 } },
+  valve_42: { A: { x: 12, y: 2 }, B: { x: 26, y: 2 }, P: { x: 19, y: V_BH - 2 }, T: { x: 29, y: V_BH - 2 } },
+  valve_52: { A: { x: 11, y: 2 }, B: { x: 27, y: 2 }, T1: { x: 4, y: V_BH - 2 }, P: { x: 19, y: V_BH - 2 }, T2: { x: 34, y: V_BH - 2 } },
+  valve_53: { A: { x: 11, y: 2 }, B: { x: 27, y: 2 }, T1: { x: 4, y: V_BH - 2 }, P: { x: 19, y: V_BH - 2 }, T2: { x: 34, y: V_BH - 2 } },
 }
 
-const VALVE_CONFIGS: Record<string, ValveConfig> = {
-  valve_22: {
-    positions: 2,
-    ports: ['P', 'A'],
-    flows: [
-      [['block', 'P'], ['block', 'A']],
-      [['P', 'A']],
-    ],
-  },
-  valve_32: {
-    positions: 2,
-    ports: ['P', 'A', 'T'],
-    flows: [
-      [['A', 'T'], ['block', 'P']],
-      [['P', 'A']],
-    ],
-  },
-  valve_42: {
-    positions: 2,
-    ports: ['P', 'A', 'B', 'T'],
-    flows: [
-      [['P', 'A'], ['B', 'T']],
-      [['P', 'B'], ['A', 'T']],
-    ],
-  },
-  valve_52: {
-    positions: 2,
-    ports: ['P', 'A', 'B', 'T1', 'T2'],
-    flows: [
-      [['P', 'A'], ['B', 'T1']],
-      [['P', 'B'], ['A', 'T2']],
-    ],
-  },
-  valve_53: {
-    positions: 3,
-    ports: ['P', 'A', 'B', 'T1', 'T2'],
-    flows: [
-      [['P', 'A'], ['B', 'T1']],
-      [['block', 'P'], ['block', 'A'], ['block', 'B']],
-      [['P', 'B'], ['A', 'T2']],
-    ],
-  },
+type VFlowDef = { type: 'connect'; from: string; to: string } | { type: 'block'; port: string }
+
+const VALVE_FLOWS: Record<string, VFlowDef[][]> = {
+  valve_22: [
+    [{ type: 'block', port: 'P' }, { type: 'block', port: 'A' }],
+    [{ type: 'connect', from: 'P', to: 'A' }],
+  ],
+  valve_32: [
+    [{ type: 'connect', from: 'A', to: 'T' }, { type: 'block', port: 'P' }],
+    [{ type: 'connect', from: 'P', to: 'A' }],
+  ],
+  valve_42: [
+    [{ type: 'connect', from: 'P', to: 'A' }, { type: 'connect', from: 'B', to: 'T' }],
+    [{ type: 'connect', from: 'P', to: 'B' }, { type: 'connect', from: 'A', to: 'T' }],
+  ],
+  valve_52: [
+    [{ type: 'connect', from: 'P', to: 'A' }, { type: 'connect', from: 'B', to: 'T1' }],
+    [{ type: 'connect', from: 'P', to: 'B' }, { type: 'connect', from: 'A', to: 'T2' }],
+  ],
+  valve_53: [
+    [{ type: 'connect', from: 'P', to: 'A' }, { type: 'connect', from: 'B', to: 'T1' }],
+    [{ type: 'block', port: 'P' }, { type: 'block', port: 'A' }, { type: 'block', port: 'B' }],
+    [{ type: 'connect', from: 'P', to: 'B' }, { type: 'connect', from: 'A', to: 'T2' }],
+  ],
 }
 
-// Port positions within a box (relative to box top-left), by port name and valve type
-// We lay them out: top ports and bottom ports
-function getPortY(port: string, boxH: number): number {
-  const topPorts = new Set(['A', 'B', 'T1', 'T2'])
-  return topPorts.has(port) ? 2 : boxH - 2
+function vArrow(x1: number, y1: number, x2: number, y2: number, s = 5): string {
+  const len = Math.hypot(x2 - x1, y2 - y1)
+  if (len < 1) return `${x2},${y2} ${x2},${y2} ${x2},${y2}`
+  const dx = (x2 - x1) / len, dy = (y2 - y1) / len
+  const ax = x2 - dx * s - dy * s / 2, ay = y2 - dy * s + dx * s / 2
+  const bx = x2 - dx * s + dy * s / 2, by = y2 - dy * s - dx * s / 2
+  return `${x2},${y2} ${ax},${ay} ${bx},${by}`
 }
 
 function ValveWidget({ dev, pos, energized, retracting, selected, onMouseDown, onRemove }: PgWidgetProps) {
   const label = dev.label || DEVICE_LABELS[dev.deviceType]
-  const cfg = VALVE_CONFIGS[dev.deviceType]
-  if (!cfg) return null
+  const ports = VALVE_PORT_POS[dev.deviceType]
+  const flows = VALVE_FLOWS[dev.deviceType]
+  if (!ports || !flows) return null
 
-  const BW = 44, BH = 50, GAP = 2
-  const nPos = cfg.positions
-  const totalW = nPos * BW + (nPos - 1) * GAP + 60  // 30px each side for actuator symbols
-  const muted = '#94a3b8'
-  const green = '#22c55e'
-  const amber = '#f59e0b'
+  const nPos = flows.length
+  const GREEN = '#22c55e', AMBER = '#f59e0b', MUTED = '#475569', DIM = '#334155'
 
-  // active position: 0 = de-energized (spring/rest), 1 = coil1 (energized), 2 = coil2 (retracting)
   let activePos = 0
   if (energized && !retracting) activePos = 1
-  else if (retracting) activePos = cfg.positions - 1
+  else if (retracting) activePos = nPos - 1
 
-  const ports = cfg.ports
-  const portXs: Record<string, number> = {}
-  const spacing = BW / (ports.length + 1)
-  ports.forEach((p, i) => { portXs[p] = (i + 1) * spacing })
+  const activeColor = activePos === 0 ? MUTED
+    : (retracting && activePos === nPos - 1 ? AMBER : GREEN)
+  const sol1Color = energized ? GREEN : MUTED
+  const sol2Color = retracting ? AMBER : MUTED
 
-  const base: React.CSSProperties = {
-    position: 'absolute', left: pos.x, top: pos.y,
-    userSelect: 'none', cursor: 'grab',
-    outline: selected ? '2px solid #60a5fa' : 'none', borderRadius: 4,
-  }
+  const yBoxTop = V_STUB
+  const yBoxMid = V_STUB + V_BH / 2
+  const W = V_AL + nPos * (V_BW + V_GAP) + V_AR
+  const H = V_STUB + V_BH + V_STUB + 10
 
-  const boxStartX = 30  // offset for left actuator
+  const boxX = (pi: number) => V_AL + pi * (V_BW + V_GAP)
+  const activeBoxX = boxX(activePos)
+
+  // Spring zigzag points for right actuator
+  const springStartX = V_AL + nPos * (V_BW + V_GAP) + 3
+  const springPts = Array.from({ length: 8 }, (_, i) =>
+    `${springStartX + i * 3},${yBoxMid + (i % 2 === 0 ? -5 : 5)}`
+  ).join(' ')
 
   return (
-    <div style={base} onMouseDown={onMouseDown}>
-      <svg width={totalW} height={BH + 30}>
-        {/* Left actuator (coil 1) */}
-        {/* Solenoid box */}
-        <rect x={2} y={BH / 2 - 8} width={22} height={16} stroke={energized ? green : muted} strokeWidth={1.5} fill="#1e293b" />
-        <line x1={5} y1={BH / 2 - 4} x2={5} y2={BH / 2 + 4} stroke={energized ? green : muted} strokeWidth={1} />
-        <line x1={9} y1={BH / 2 - 4} x2={9} y2={BH / 2 + 4} stroke={energized ? green : muted} strokeWidth={1} />
-        <line x1={13} y1={BH / 2 - 4} x2={13} y2={BH / 2 + 4} stroke={energized ? green : muted} strokeWidth={1} />
-        <line x1={17} y1={BH / 2 - 4} x2={17} y2={BH / 2 + 4} stroke={energized ? green : muted} strokeWidth={1} />
-        <line x1={24} y1={BH / 2} x2={boxStartX} y2={BH / 2} stroke={energized ? green : muted} strokeWidth={1.5} />
-        <text x={13} y={BH / 2 - 10} textAnchor="middle" fontSize={6} fill={energized ? green : '#64748b'}>SOL</text>
+    <div
+      style={{
+        position: 'absolute', left: pos.x, top: pos.y,
+        userSelect: 'none', cursor: 'grab',
+        outline: selected ? '2px solid #60a5fa' : 'none', borderRadius: 4,
+      }}
+      onMouseDown={onMouseDown}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <svg width={W} height={H}>
+        {/* ── Left actuator: solenoid 1 ── */}
+        <rect x={2} y={yBoxMid - 9} width={22} height={18} stroke={sol1Color} strokeWidth={1.5} fill="#1e293b" />
+        {[4, 8, 12, 16].map(ox => (
+          <line key={ox} x1={2 + ox} y1={yBoxMid - 5} x2={2 + ox} y2={yBoxMid + 5} stroke={sol1Color} strokeWidth={1} />
+        ))}
+        <line x1={24} y1={yBoxMid} x2={V_AL} y2={yBoxMid} stroke={sol1Color} strokeWidth={1.5} />
+        <text x={13} y={yBoxMid - 11} textAnchor="middle" fontSize={6} fill={sol1Color}>SOL1</text>
 
-        {/* Right actuator (spring or coil 2) */}
-        {cfg.positions === 3 ? (
+        {/* ── Right actuator: spring (2-pos) or solenoid 2 (3-pos) ── */}
+        {nPos === 3 ? (
           <>
-            {/* Second solenoid for 5/3 */}
-            <rect x={boxStartX + nPos * BW + (nPos - 1) * GAP + 4} y={BH / 2 - 8} width={22} height={16}
-              stroke={retracting ? amber : muted} strokeWidth={1.5} fill="#1e293b" />
-            {[5, 9, 13, 17].map(ox => (
-              <line key={ox} x1={boxStartX + nPos * BW + (nPos - 1) * GAP + 4 + ox - 2} y1={BH / 2 - 4}
-                x2={boxStartX + nPos * BW + (nPos - 1) * GAP + 4 + ox - 2} y2={BH / 2 + 4}
-                stroke={retracting ? amber : muted} strokeWidth={1} />
+            <line x1={V_AL + nPos * (V_BW + V_GAP)} y1={yBoxMid} x2={W - 24} y2={yBoxMid} stroke={sol2Color} strokeWidth={1.5} />
+            <rect x={W - 24} y={yBoxMid - 9} width={22} height={18} stroke={sol2Color} strokeWidth={1.5} fill="#1e293b" />
+            {[2, 6, 10, 14].map(ox => (
+              <line key={ox} x1={W - 24 + ox} y1={yBoxMid - 5} x2={W - 24 + ox} y2={yBoxMid + 5} stroke={sol2Color} strokeWidth={1} />
             ))}
-            <line x1={boxStartX + nPos * BW + (nPos - 1) * GAP} y1={BH / 2}
-              x2={boxStartX + nPos * BW + (nPos - 1) * GAP + 4} y2={BH / 2}
-              stroke={retracting ? amber : muted} strokeWidth={1.5} />
-            <text x={boxStartX + nPos * BW + (nPos - 1) * GAP + 14} y={BH / 2 - 10} textAnchor="middle" fontSize={6} fill={retracting ? amber : '#64748b'}>SOL</text>
+            <text x={W - 13} y={yBoxMid - 11} textAnchor="middle" fontSize={6} fill={sol2Color}>SOL2</text>
           </>
         ) : (
           <>
-            {/* Spring return zigzag */}
-            {(() => {
-              const sx = boxStartX + nPos * BW + (nPos - 1) * GAP + 4
-              const sy = BH / 2
-              const pts = [sx, sy - 6, sx + 4, sy + 6, sx + 8, sy - 6, sx + 12, sy + 6, sx + 16, sy].map(
-                (v, i) => i % 2 === 0 ? v : v
-              )
-              const d = pts.reduce((acc, v, i) => i === 0 ? `M${v},${BH / 2}` : i % 2 === 0 ? acc + ` L${v},${pts[i + 1] ?? BH / 2}` : acc, '')
-              return (
-                <>
-                  <line x1={boxStartX + nPos * BW + (nPos - 1) * GAP} y1={BH / 2} x2={sx} y2={BH / 2} stroke={muted} strokeWidth={1.5} />
-                  <polyline points={[sx, sy, sx + 3, sy - 5, sx + 6, sy + 5, sx + 9, sy - 5, sx + 12, sy + 5, sx + 16, sy].join(',')} fill="none" stroke={muted} strokeWidth={1.5} />
-                  <line x1={sx + 16} y1={BH / 2} x2={sx + 20} y2={BH / 2} stroke={muted} strokeWidth={1.5} />
-                </>
-              )
-            })()}
+            <line x1={V_AL + nPos * (V_BW + V_GAP)} y1={yBoxMid} x2={springStartX} y2={yBoxMid} stroke={MUTED} strokeWidth={1.5} />
+            <polyline points={springPts} fill="none" stroke={MUTED} strokeWidth={1.5} />
+            <line x1={springStartX + 24} y1={yBoxMid - 7} x2={springStartX + 24} y2={yBoxMid + 7} stroke={MUTED} strokeWidth={2} />
           </>
         )}
 
-        {/* Valve position boxes */}
+        {/* ── Valve position boxes ── */}
         {Array.from({ length: nPos }).map((_, pi) => {
-          const bx = boxStartX + pi * (BW + GAP)
+          const bx = boxX(pi)
           const isActive = pi === activePos
-          const flowColor = isActive ? (pi > 0 && retracting ? amber : green) : '#334155'
-          const flows = cfg.flows[pi] ?? []
+          const fc = isActive ? activeColor : DIM
+          const boxFlows = flows[pi] ?? []
           return (
             <g key={pi}>
-              <rect x={bx} y={0} width={BW} height={BH}
-                stroke={isActive ? (pi > 0 && retracting ? amber : green) : '#475569'}
-                strokeWidth={isActive ? 2 : 1} fill={isActive ? '#0f172a' : '#1e293b'} />
-              {/* Draw flow paths inside box */}
-              {flows.map((flow, fi) => {
-                if (flow[0] === 'block') {
-                  const px = portXs[flow[1] as string] ?? 0
-                  const py = getPortY(flow[1] as string, BH)
-                  return (
-                    <line key={fi} x1={bx + px - 5} y1={bx === bx ? py + (py < BH / 2 ? 0 : 0) : py}
-                      x2={bx + px + 5} y2={py}
-                      stroke={flowColor} strokeWidth={2} />
-                  )
+              <rect x={bx} y={yBoxTop} width={V_BW} height={V_BH}
+                stroke={isActive ? activeColor : MUTED}
+                strokeWidth={isActive ? 2 : 1}
+                fill={isActive ? '#0f172a' : '#1e293b'}
+              />
+              {boxFlows.map((step, si) => {
+                if (step.type === 'block') {
+                  const p = ports[step.port]
+                  if (!p) return null
+                  const ax = bx + p.x, ay = yBoxTop + p.y
+                  const isTop = p.y <= 2
+                  const barY = ay + (isTop ? 5 : -5)
+                  return <line key={si} x1={ax - 7} y1={barY} x2={ax + 7} y2={barY} stroke={fc} strokeWidth={2.5} />
                 }
-                const [from, to] = flow as [string, string]
-                const fx = portXs[from] ?? 0, fy = getPortY(from, BH)
-                const tx = portXs[to] ?? 0, ty = getPortY(to, BH)
-                // Arrow midpoint
-                const mx = (fx + tx) / 2, my = (fy + ty) / 2
+                const from = ports[step.from], to = ports[step.to]
+                if (!from || !to) return null
+                const fx = bx + from.x, fy = yBoxTop + from.y
+                const tx = bx + to.x, ty = yBoxTop + to.y
                 return (
-                  <g key={fi}>
-                    <line x1={bx + fx} y1={fy} x2={bx + tx} y2={ty} stroke={flowColor} strokeWidth={1.5} />
-                    <polygon points={`${bx + mx},${my - 4} ${bx + mx + 4},${my + 3} ${bx + mx - 4},${my + 3}`}
-                      fill={flowColor} />
+                  <g key={si}>
+                    <line x1={fx} y1={fy} x2={tx} y2={ty} stroke={fc} strokeWidth={1.5} />
+                    <polygon points={vArrow(fx, fy, tx, ty)} fill={fc} />
                   </g>
                 )
               })}
@@ -656,18 +686,24 @@ function ValveWidget({ dev, pos, energized, retracting, selected, onMouseDown, o
           )
         })}
 
-        {/* Port stubs below/above each box (only on active box for clarity) */}
-        {ports.map((p, i) => {
-          const px = portXs[p] ?? 0
-          const py = getPortY(p, BH)
-          const isTop = py < BH / 2
-          const stubY1 = isTop ? -12 : BH + 12
-          const stubY2 = isTop ? 0 : BH
-          const activeBx = boxStartX + activePos * (BW + GAP)
+        {/* ── Port stubs on active box ── */}
+        {Object.entries(ports).map(([name, p]) => {
+          const ax = activeBoxX + p.x
+          const isTop = p.y <= 2
+          const absPortY = yBoxTop + p.y
           return (
-            <g key={p}>
-              <line x1={activeBx + px} y1={py === 2 ? 0 : BH} x2={activeBx + px} y2={stubY1} stroke={muted} strokeWidth={1} strokeDasharray="2 2" />
-              <text x={activeBx + px} y={isTop ? -14 : BH + 22} textAnchor="middle" fontSize={7} fill={muted}>{p}</text>
+            <g key={name}>
+              {isTop ? (
+                <>
+                  <line x1={ax} y1={absPortY} x2={ax} y2={V_STUB - 4} stroke={activeColor} strokeWidth={1.5} />
+                  <text x={ax} y={V_STUB - 6} textAnchor="middle" fontSize={7} fill={activeColor}>{name}</text>
+                </>
+              ) : (
+                <>
+                  <line x1={ax} y1={absPortY} x2={ax} y2={V_STUB + V_BH + 5} stroke={activeColor} strokeWidth={1.5} />
+                  <text x={ax} y={V_STUB + V_BH + 14} textAnchor="middle" fontSize={7} fill={activeColor}>{name}</text>
+                </>
+              )}
             </g>
           )
         })}
